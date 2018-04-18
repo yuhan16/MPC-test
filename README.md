@@ -1,7 +1,7 @@
 # MPC-test
 A repository for lab code test written by Matlab.
 
-Modification:
+## Modification:
 
 Since the simple model in the simulation actually doesn't generate friction, besides there are many other methods to approximate the friction cone like Lorentz cone, we only focus on the model with contact and the optimization speed of the model via Gurobi. The friction part is deleted in this version, including
 
