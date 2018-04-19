@@ -1,14 +1,13 @@
-function [result] = find_optimal(Amat, bmat, Cmat, Emat, Fmat, Gmat, Smat, Q, lb, ub,...
+function [result] = find_optimal(Amat, bmat, Cmat, Dmat, Emat, Fmat, Smat, Q, lb, ub,...
                  senselst, vtypelst, x0, xd, dlim, bigM, N, dimC)
 
 try
     clear model;
-    model.A = sparse([Amat; -Emat; Fmat; Gmat; Cmat]);
-    %model.obj = zeros(1, N*(dimA+dimB+2*dimC));
+    model.A = sparse([Amat; Cmat; -Dmat; Emat; Fmat]);
     model.obj = -2*Smat*xd;
     model.Q = Smat;
     model.objcon = x0'*Q*x0 + xd'*Smat*xd;
-    model.rhs = [bmat*x0; zeros(N*dimC, 1); bigM*ones(N*dimC, 1); zeros(N*dimC, 1); dlim];
+    model.rhs = [bmat*x0; dlim; zeros(N*dimC, 1); bigM*ones(2*N*dimC, 1)];
     model.lb = lb;
     model.ub = ub;
     model.sense = senselst;
