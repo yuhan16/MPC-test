@@ -7,7 +7,7 @@ try
     model.obj = -2*Smat*xd;
     model.Q = Smat;
     model.objcon = x0'*Q*x0 + xd'*Smat*xd;
-    model.rhs = [bmat*x0; dlim; zeros(N*dimC, 1); bigM*ones(2*N*dimC, 1)];
+    model.rhs = [bmat*x0; dlim; zeros(N*dimC, 1); bigM*ones(N*dimC, 1); zeros(N*dimC, 1)];
     model.lb = lb;
     model.ub = ub;
     model.sense = senselst;
