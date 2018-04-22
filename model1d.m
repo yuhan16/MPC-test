@@ -97,7 +97,7 @@ initTerm = x0'*Q*x0;
 %         Cmat * X <= dlim,       (2N x dim(X))
 %         -Dmat * X <= 0,         (N*dimC x dim(X))
 %         Emat * X <= M,          (N*dimC x dim(X))
-%         Fmat * X <= M,          (N*dimC x dim(X))
+%         Fmat * X <= 0,          (N*dimC x dim(X))
 %         xmin <= x < xim, 
 %         umin <= u <= umax, 
 %         cn >=0, z = {0, 1} 
@@ -121,7 +121,7 @@ for i = 1: iter
         xop(:, i) = x0;
     else
         fprintf('\n%d iter: \n', i);
-        result = find_optimal_1(Amat, bmat, Cmat, Dmat, Emat, Fmat, Smat, Q, lb, ub, ...
+        result = find_optimal(Amat, bmat, Cmat, Dmat, Emat, Fmat, Smat, Q, lb, ub, ...
                    senselst, vtypelst, x0, xd, dlim, bigM, N, dimC);
         X = result.x;
         xop(:, i) = X(1: dimA);
