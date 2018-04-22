@@ -97,7 +97,7 @@ initTerm = x0'*Q*x0;
 %         Cmat * X <= dlim,       (2N x dim(X))
 %         -Dmat * X <= 0,         (N*dimC x dim(X))
 %         Emat * X <= M,          (N*dimC x dim(X))
-%         Fmat * X <= M,          (N*dimC x dim(X))
+%         Fmat * X <= 0,          (N*dimC x dim(X))
 %         xmin <= x < xim, 
 %         umin <= u <= umax, 
 %         cn >=0, z = {0, 1} 
