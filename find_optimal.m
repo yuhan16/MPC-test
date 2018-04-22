@@ -1,13 +1,13 @@
-function [result] = find_optimal(Amat, bmat, Cmat, Dmat, Emat, Fmat, Smat, Q, lb, ub,...
-                 senselst, vtypelst, x0, xd, dlim, bigM, N, dimC)
+function [result, tElapsed] = find_optimal(Amat, bmat, Dmat, Dlim, Emat, Elim, Fmat, Smat, ...
+                 Q, lb, ub, senselst, vtypelst, x0, xd, N, dimC)
 
 try
     clear model;
-    model.A = sparse([Amat; Cmat; -Dmat; Emat; Fmat]);
+    model.A = sparse([Amat; -Dmat; Emat; Fmat]);
     model.obj = -2*Smat*xd;
     model.Q = Smat;
     model.objcon = x0'*Q*x0 + xd'*Smat*xd;
-    model.rhs = [bmat*x0; dlim; zeros(N*dimC, 1); bigM*ones(N*dimC, 1); zeros(N*dimC, 1)];
+    model.rhs = [bmat*x0; Dlim; Elim; zeros(N*dimC, 1)];
     model.lb = lb;
     model.ub = ub;
     model.sense = senselst;
@@ -26,7 +26,7 @@ try
     tStart = tic; 
     result = gurobi(model, params);
     
-    tElapsed = toc(tStart) 
+    tElapsed = toc(tStart); 
     %disp(result)
     %fprintf('Obj: %e\n', result.objval);
 
