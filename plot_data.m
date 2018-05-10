@@ -1,4 +1,4 @@
-function plot_data(xop, uop, Jop, top, plot_switch)
+function plot_data(xop, uop, Jop, top, fop, zop, plot_switch)
 
 % plot state evolution
 if plot_switch(1)
@@ -44,6 +44,25 @@ if plot_switch(4)
     hold on
     plot(top);
     title('time cost');
+end
+
+% plot contact force and sequence
+if plot_switch(5)
+    figure;
+    hold on
+    plot(fop(1,:));
+    hold on
+    stairs(zop(1,:));
+    title('force and corresponding bin var (right side)');
+    legend('force_1','bin_1')
+    
+    figure;
+    hold on
+    plot(fop(2,:));
+    hold on
+    stairs(zop(2,:));
+    title('force and corresponding bin var (left side)');
+    legend('force_2','bin_2')
 end
 
 end
