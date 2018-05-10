@@ -3,8 +3,10 @@ A repository for lab code test written by Matlab.
 
 ## Modification:
 
-This version fixed the inaccurate model and add a plot_data function to plot states, input, cost and time. Friction is still not considered in this model.
+This sub version adds following features based on the new model.
 
-1. the complementarity constraint for contact is changed according to the correction file. https://github.com/JamesZhaoyh/MPC-test/blob/bigM-v1.3/Some%20Corrections%20to%20the%20Original%20Model.pdf
+1. add plot function for contact force and corresponding binary variables;
 
-2. a plot function is added.
+2. add initial condition for the optimization problem such that initial condition at step k is the optimal solution of step k-1, changing the problem into a sequential optimization problem.
+
+The result shows the performance improves a little bit (roughly 5ms) for solving each step.

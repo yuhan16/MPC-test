@@ -50,7 +50,7 @@ dlim = [dmax-1; -dmin-1];
 [~, dimC] = size(C);
 
 % initial states and desired terminal point
-x0 = [2; 0.5; 0; 0; 0; 0];
+x0 = [0; 1; 1; 0; 0; 0];
 xd = kron(ones(N,1),  [3; 1.2; 0; 0; 0; 0]);
 xd = [xd; zeros(N*(dimB+2*dimC), 1)];
 
@@ -103,7 +103,7 @@ senselst = [repmat('=', 1, N*dimA) repmat('<', 1, 3*N*dimC)];
 vtypelst = [repmat('C', 1, N*(dimA+dimB+dimC)) repmat('B', 1, N*dimC)];
 lb = [kron(ones(N,1), xmin); kron(ones(N,1), umin); zeros(2*N*dimC, 1)];
 ub = [kron(ones(N,1), xmax); kron(ones(N,1), umax); Inf*ones(N*dimC, 1); ones(N*dimC, 1)];
-%initcond = zeros(N*(dimA+dimB+2*dimC), 1);
+initcond = zeros(N*(dimA+dimB+2*dimC), 1);
 
 % plot robot model
 figure(1)
@@ -111,17 +111,19 @@ plot_robot(x0);
 title('robot model');
 figure(2)
 
-xop = zeros(dimA, iter);
-uop = zeros(dimB, iter);
-Jop = zeros(1, iter);
-top = zeros(1, iter);
+xop = zeros(dimA, iter);    % optimal states (current state)
+uop = zeros(dimB, iter);    % optimal input, the first input
+Jop = zeros(1, iter);       % optimal cost
+top = zeros(1, iter);       % time consumed at each step
+fop = zeros(2, iter);       % contact force, 1 for right, 2 for left
+zop = zeros(2, iter);       % the corresponding bin vars
 for i = 1: iter
     fprintf('%d iter: \n', i);
     if i == 1
         xop(:, i) = x0;
     else
         [result, tElapsed] = find_optimal(Amat, bmat, Dmat, Dlim, Emat, Elim, Fmat, Smat, ...
-                  Q, lb, ub, senselst, vtypelst, x0, xd, N, dimC);
+                  Q, lb, ub, senselst, vtypelst, x0, xd, N, dimC, initcond);
 
         X = result.x;
         xop(:, i) = X(1: dimA);
@@ -129,7 +131,11 @@ for i = 1: iter
         uop(:, i) = X(dimA+1: dimA+dimB);
         Jop(i) = result.objval;
         top(i) = tElapsed;
-        
+        fop(1,i) = X(N*(dimA+dimB)+1);
+        fop(2,i) = X(N*(dimA+dimB)+2);
+        zop(2,i) = X(N*(dimA+dimB+dimC)+2);
+        zop(1,i) = X(N*(dimA+dimB+dimC)+1);
+        initcond = X;
         % display solution
 %         disp('current state x =');
 %         disp(x0);
@@ -147,7 +153,8 @@ for i = 1: iter
     
 end
 
-% plot switch for each component: [state, input, cost, time]
+% plot switch for each component: [state, input, cost, time, force]
 % value = 1: plot, value = 0: not plot
-plot_switch = [1 0 0 1];
-plot_data(xop, uop, Jop, top, plot_switch);
+plot_switch = [0 0 0 1 1];
+plot_data(xop, uop, Jop, top, fop, zop, plot_switch);
+        

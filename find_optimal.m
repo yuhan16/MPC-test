@@ -1,5 +1,5 @@
 function [result, tElapsed] = find_optimal(Amat, bmat, Dmat, Dlim, Emat, Elim, Fmat, Smat, ...
-                 Q, lb, ub, senselst, vtypelst, x0, xd, N, dimC)
+                 Q, lb, ub, senselst, vtypelst, x0, xd, N, dimC, initcond)
 
 try
     clear model;
@@ -13,6 +13,7 @@ try
     model.sense = senselst;
     model.vtype = vtypelst;
     model.modelsense = 'min';
+    model.start = initcond;
     
     % the following properties can be omitted
     %model.start = initcond;
