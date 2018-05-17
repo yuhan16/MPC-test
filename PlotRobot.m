@@ -1,4 +1,4 @@
-function plot_robot( x0 )
+function PlotRobot( x0 )
 
 % define axis
 axis([-6 6 -6 6]);

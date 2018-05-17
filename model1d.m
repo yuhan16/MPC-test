@@ -1,9 +1,10 @@
 close all
+clearvars;
 % joint number
 jointnum = 3;
 
 % compute dynamics
-[Jac, Msym, n] = model1d_symbolic;
+[Jac, Msym, n] = model1dSymbolic;
 
 % mass for each link
 m = [1 1 1];
@@ -12,7 +13,7 @@ M = [m(1)+m(2)+m(3) m(2) -m(3); m(2) m(2) 0; -m(3) 0 m(3)];
 % sys info
 mu = 0.6;
 dt = 0.1;
-N = 10;
+N = 20;
 Q = blkdiag(10, 1, 10, 1, 1, 1);
 Qf = Q;
 R = blkdiag(1, 1, 1);
@@ -22,8 +23,8 @@ xmin = [dmin; 0; 0; -1; -1; -1];
 xmax = [dmax; dmax; dmax; 1; 1; 1];
 umin = [-1; -1; -1];
 umax = [1; 1; 1];
-bigM = 1000;
-iter = 200;
+bigM = 10;
+iter = 100;
 
 % generate surface normal, n(:, 1) right side, n(:, 2) left side
 n = double(n);
@@ -37,6 +38,7 @@ n = double(n);
 % generate system matrix
 %  - x(k+1) = Ax(k) + Bu(k) + Ccn(k)
 %  - 0 <= cn(k) _|_ Dx(k+1) + dlim >=0 
+tStart = tic; 
 mat = [eye(jointnum), -dt*eye(jointnum); zeros(jointnum), eye(jointnum)];
 A = inv(mat);
 B = inv(mat) * [zeros(jointnum); inv(M)*dt];
@@ -51,63 +53,24 @@ dlim = [dmax-1; -dmin-1];
 
 % initial states and desired terminal point
 x0 = [0; 1; 1; 0; 0; 0];
-xd = kron(ones(N,1),  [3; 1.2; 0; 0; 0; 0]);
-xd = [xd; zeros(N*(dimB+2*dimC), 1)];
+xd = [3; 1.2; 0; 0; 0; 0]; 
+%xd = kron(ones(N,1),  [3; 1.2; 0; 0; 0; 0]);
 
-% compute big matrix
-% Amat * X = bmat *x0 -> x(k+1) = Ax(k)+Bu(k)+Ccn(k)
-a = kron(eye(N), -eye(dimA));
-a = a + kron(tril(ones(N),-1)-tril(ones(N),-2), A);
-b = kron(eye(N), B);
-c = kron(eye(N), C);
-Amat = sparse([a b c zeros(N*dimA, N*dimC)]);
-
-% bmat
-bmat = sparse([-A; kron(ones(N-1, 1), zeros(dimA))]);
-
-% Phi(q) = [q1+q2 <= dstmax-1; q1-q3-1 >= dstmin]
-% Dmat * X + Dlim >= 0 -> Phi(q(k+1)) = Dx(k+1)+dlim >= 0
-Dmat = sparse([kron(eye(N), D) zeros(N*dimC, N*(dimB+2*dimC))]);
-Dlim = kron(ones(N, 1), dlim);
-
-% Emat * X <= Elim -> Phi(q(k+1)) <= M(1-z(k)) -> Dx(k+1)+dlim <= M(1-z) 
-Emat = sparse([kron(eye(N), D) zeros(N*dimC, N*(dimB+dimC)) ...
-               kron(eye(N), bigM*eye(dimC))]);
-Elim = kron(ones(N, 1), [bigM; bigM]-dlim);
-
-% Fmat * X <= 0 -> cn(k) <= Mz(k)
-Fmat = sparse([zeros(N*dimC, N*dimA) zeros(N*dimC, N*dimB) ...
-         kron(eye(N), eye(dimC)) -bigM*kron(eye(N), eye(dimC))]);
-
-% Smat -> J = X' * Smat * X
-q = blkdiag(kron(eye(N-1), Q), Qf);
-r = kron(eye(N), R);
-S = blkdiag(q, r);
-Smat = sparse([S zeros(N*(dimA+dimB), 2*N*dimC); ...
-            zeros(2*N*dimC, N*(dimA+dimB)) zeros(2*N*dimC)]);
-
-% initial term: x0'Q*x0 
-initTerm = x0'*Q*x0;
-
-% build the model
-%  J = min X' * Smat * X + x0'*Q*x0;
-%   s.t.  Amat * X = bmat*x(0),   (N*dimA x dim(X))
-%         Dmat * X + Dlim >= 0,   (N*dimC x dim(X))
-%         Emat * X <= Elim,       (N*dimC x dim(X))
-%         Fmat * X <= 0,          (N*dimC x dim(X))
-%         xmin <= x < xim, 
-%         umin <= u <= umax, 
-%         cn >=0, z = {0, 1} 
-
-senselst = [repmat('=', 1, N*dimA) repmat('<', 1, 3*N*dimC)];
-vtypelst = [repmat('C', 1, N*(dimA+dimB+dimC)) repmat('B', 1, N*dimC)];
-lb = [kron(ones(N,1), xmin); kron(ones(N,1), umin); zeros(2*N*dimC, 1)];
-ub = [kron(ones(N,1), xmax); kron(ones(N,1), umax); Inf*ones(N*dimC, 1); ones(N*dimC, 1)];
-initcond = zeros(N*(dimA+dimB+2*dimC), 1);
+ISSUB = false;   % if use method with substitution
+if ISSUB==true
+    [matrix_ineq, solver_setting] = FormulateSub(A, B, C, D, dlim, Q, Qf, R, N, ...
+                                              bigM, xmax, xmin, umax, umin);
+    initcond = zeros(N*(dimB+2*dimC), 1);
+else
+    [matrix_ineq, solver_setting] = FormulateNoSub(A, B, C, D, dlim, Q, Qf, R, N, ...
+                                              bigM, xmax, xmin, umax, umin);
+    initcond = zeros(N*(dimA+dimB+2*dimC), 1);
+end
+tFormulate = toc(tStart); 
 
 % plot robot model
 figure(1)
-plot_robot(x0);
+PlotRobot(x0);
 title('robot model');
 figure(2)
 
@@ -122,19 +85,30 @@ for i = 1: iter
     if i == 1
         xop(:, i) = x0;
     else
-        [result, tElapsed] = find_optimal(Amat, bmat, Dmat, Dlim, Emat, Elim, Fmat, Smat, ...
-                  Q, lb, ub, senselst, vtypelst, x0, xd, N, dimC, initcond);
-
+        [result, tElapsed] = FindOptimal(matrix_ineq, solver_setting, x0, xd, initcond, ISSUB);
         X = result.x;
-        xop(:, i) = X(1: dimA);
+        if ISSUB==true
+            % split variables
+            uvar = X(1: N*dimB);
+            cvar = X(N*dimB+1: N*(dimB+dimC));
+            zvar = X(N*(dimB+dimC)+1: end);
+            xop(:, i) = A*x0+ B*uvar(1: dimB) + C*cvar(1: dimC);
+        else
+            % split variables
+            xvar = X(1: N*dimA+1);
+            uvar = X(N*dimA+1: N*(dimA+dimB));
+            cvar = X(N*(dimA+dimB)+1: N*(dimA+dimB+dimC));
+            zvar = X(N*(dimA+dimB+dimC)+1: end);
+            xop(:, i) = xvar(1: dimA);
+        end  
         x0 = xop(:, i);
-        uop(:, i) = X(dimA+1: dimA+dimB);
+        uop(:, i) = uvar(1: dimB);
         Jop(i) = result.objval;
         top(i) = tElapsed;
-        fop(1,i) = X(N*(dimA+dimB)+1);
-        fop(2,i) = X(N*(dimA+dimB)+2);
-        zop(2,i) = X(N*(dimA+dimB+dimC)+2);
-        zop(1,i) = X(N*(dimA+dimB+dimC)+1);
+        fop(1,i) = cvar(1);
+        fop(2,i) = cvar(2);
+        zop(1,i) = zvar(1);
+        zop(2,i) = zvar(2);
         initcond = X;
         % display solution
 %         disp('current state x =');
@@ -146,7 +120,7 @@ for i = 1: iter
     
         % plot robot dynamics
         clf(figure(2)); 
-        plot_robot(x0);
+        PlotRobot(x0);
         title('robot dynamics');
         pause(0.05);
     end
@@ -155,6 +129,16 @@ end
 
 % plot switch for each component: [state, input, cost, time, force]
 % value = 1: plot, value = 0: not plot
-plot_switch = [0 0 0 1 1];
-plot_data(xop, uop, Jop, top, fop, zop, plot_switch);
-        
+plot_switch = [0 0 0 0 1];
+PlotData(xop, uop, Jop, top, fop, zop, plot_switch);
+
+% test time report
+disp('%%%%%% test time report %%%%%%');
+fprintf('Solve using method ');
+if ISSUB
+    fprintf('with substitution.\n');
+else
+    fprintf('without substitution. \n');
+end
+fprintf('problem formulation time: %f s\n', tFormulate);
+fprintf('average solving time: %f s\n', mean(top));

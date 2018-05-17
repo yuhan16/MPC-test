@@ -1,4 +1,4 @@
-function plot_data(xop, uop, Jop, top, fop, zop, plot_switch)
+function PlotData(xop, uop, Jop, top, fop, zop, plot_switch)
 
 % plot state evolution
 if plot_switch(1)
