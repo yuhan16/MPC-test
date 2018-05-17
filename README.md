@@ -18,4 +18,4 @@ This version made a big change to the structure of the code compared with previo
 3. add a switch to select and test different formulation methods.
 
 ## Result:
-Although the formulation method with substitution greatly reduced the number of decision variables, but the solving time is nearly twice as the formulation without substitution because the matrices in the former method have higher density.  
+Although the formulation method with substitution greatly reduced the number of decision variables, the solving time is nearly twice as the formulation without substitution because the matrices in the former method have higher density.  
