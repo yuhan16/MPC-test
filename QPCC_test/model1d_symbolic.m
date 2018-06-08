@@ -1,4 +1,4 @@
-function [Jac, M, n] = model1dSymbolic
+function [Jac, M, n] = model1d_symbolic
     
 % joint number
 jointnum = 3;
