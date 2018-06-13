@@ -1,4 +1,4 @@
-function [matrix_ineq, solver_setting] = FormulateNoSub(sysdynm, sysparam)
+function [bigMat, solverConfig] = FormulateNoSub(sysdynm, sysparam)
 % this function formulate the problem without substitution
 % build the model
 %  J = min X'*Smat*X + 2*x0'*cmat'*X + 2*Xd*dmat'*X
@@ -29,9 +29,9 @@ xmin = sysparam.xmin;
 umax = sysparam.umax;
 umin = sysparam.umin;
 
-[dimA, ~] = size(A);
-[~, dimB] = size(B);
-[~, dimC] = size(C);
+dimA = sysparam.dimA;
+dimB = sysparam.dimB;
+dimC = sysparam.dimC;
 
 % compute big matrix
 % Amat * X = bmat *x0 -> x(k+1) = Ax(k)+Bu(k)+Ccn(k)
@@ -39,52 +39,41 @@ a = kron(eye(N), -eye(dimA));
 a = a + kron(tril(ones(N),-1)-tril(ones(N),-2), A);
 b = kron(eye(N), B);
 c = kron(eye(N), C);
-Amat = sparse([a b c zeros(N*dimA, N*dimC)]);
+bigMat.Amat = sparse([a b c zeros(N*dimA, N*dimC)]);
 
 % bmat
-bmat = sparse([-A; kron(ones(N-1, 1), zeros(dimA))]);
+bigMat.bmat = sparse([-A; kron(ones(N-1, 1), zeros(dimA))]);
 
 % Phi(q) = [q1+q2 <= dstmax-1; q1-q3-1 >= dstmin]
 % Dmat * X + Dlim >= 0 -> Phi(q(k+1)) = Dx(k+1)+dlim >= 0
-Dmat = sparse([kron(eye(N), D) zeros(N*dimC, N*(dimB+2*dimC))]);
-Dlim = kron(ones(N, 1), dlim);
+bigMat.Dmat = sparse([kron(eye(N), D) zeros(N*dimC, N*(dimB+2*dimC))]);
+bigMat.Dlim = kron(ones(N, 1), dlim);
 
 % Emat * X <= Elim -> Phi(q(k+1)) <= M(1-z(k)) -> Dx(k+1)+dlim <= M(1-z) 
-Emat = sparse([kron(eye(N), D) zeros(N*dimC, N*(dimB+dimC)) ...
+bigMat.Emat = sparse([kron(eye(N), D) zeros(N*dimC, N*(dimB+dimC)) ...
                kron(eye(N), bigM*eye(dimC))]);
-Elim = kron(ones(N, 1), [bigM; bigM]-dlim);
+bigMat.Elim = kron(ones(N, 1), [bigM; bigM]-dlim);
 
 % Fmat * X <= 0 -> cn(k) <= Mz(k)
-Fmat = sparse([zeros(N*dimC, N*dimA) zeros(N*dimC, N*dimB) ...
+bigMat.Fmat = sparse([zeros(N*dimC, N*dimA) zeros(N*dimC, N*dimB) ...
          kron(eye(N), eye(dimC)) -bigM*kron(eye(N), eye(dimC))]);
+bigMat.Flim = zeros(N*dimC, 1);
 
 % Smat -> J = X' * Smat * X
 q = blkdiag(kron(eye(N-1), Q), Qf);
 r = kron(eye(N), R);
 S = blkdiag(q, r);
-Smat = sparse([S zeros(N*(dimA+dimB), 2*N*dimC); ...
+bigMat.Smat = sparse([S zeros(N*(dimA+dimB), 2*N*dimC); ...
             zeros(2*N*dimC, N*(dimA+dimB)) zeros(2*N*dimC)]);
-
-% write the formulation in a compact form using cell array
-matrix_ineq = cell(1, 13);
-matrix_ineq{1} = Smat; matrix_ineq{2} = zeros(N*(dimA+dimB+2*dimC), dimA);
-matrix_ineq{3} = -[q zeros(N*dimA, N*(dimB+2*dimC))]';
-matrix_ineq{4} = Amat; matrix_ineq{5} = bmat;
-matrix_ineq{6} = Dmat; matrix_ineq{7} = Dlim;
-matrix_ineq{8} = Emat; matrix_ineq{9} = Elim;
-matrix_ineq{10} = Fmat; matrix_ineq{11} = zeros(N*dimC, 1);
-matrix_ineq{12} = Q; matrix_ineq{13} = q;
+bigMat.cmat = zeros(N*(dimA+dimB+2*dimC), dimA);
+bigMat.dmat = -[q zeros(N*dimA, N*(dimB+2*dimC))]';
+bigMat.Q = Q;
+bigMat.q = q;
 
 % solver settings
-senselst = [repmat('=', 1, N*dimA) repmat('<', 1, 3*N*dimC)];
-vtypelst = [repmat('C', 1, N*(dimA+dimB+dimC)) repmat('B', 1, N*dimC)];
-lb = [kron(ones(N,1), xmin); kron(ones(N,1), umin); zeros(2*N*dimC, 1)];
-ub = [kron(ones(N,1), xmax); kron(ones(N,1), umax); Inf*ones(N*dimC, 1); ones(N*dimC, 1)];
-
-solver_setting = cell(1, 4);
-solver_setting{1} = senselst;
-solver_setting{2} = vtypelst;
-solver_setting{3} = lb;
-solver_setting{4} = ub;
+solverConfig.senselst = [repmat('=', 1, N*dimA) repmat('<', 1, 3*N*dimC)];
+solverConfig.vtypelst = [repmat('C', 1, N*(dimA+dimB+dimC)) repmat('B', 1, N*dimC)];
+solverConfig.lb = [kron(ones(N,1), xmin); kron(ones(N,1), umin); zeros(2*N*dimC, 1)];
+solverConfig.ub = [kron(ones(N,1), xmax); kron(ones(N,1), umax); Inf*ones(N*dimC, 1); ones(N*dimC, 1)];
 
 end

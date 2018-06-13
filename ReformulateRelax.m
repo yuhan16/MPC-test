@@ -1,4 +1,4 @@
-function [matrix_ineq_new, solver_setting_new] = ReformulateRelax(matrix_ineq, solver_setting, indexlst, dimA, dimB, dimC, Dmat, Dlim, bigM)
+function [bigMatNew, solverConfigNew] = ReformulateRelax(bigMat, solverConfig, indexlst, sysparam, Dmat, Dlim)
 % this function reformulates the relaxed problem into an MIQP so that more
 % precise solution can be computed.
 % new problem variables: X = [x, u, cn, zbar] (zbar undecided bin seq)
@@ -14,35 +14,39 @@ function [matrix_ineq_new, solver_setting_new] = ReformulateRelax(matrix_ineq, s
 %         umin <= u <= umax, 
 %         cn >=0, 
 
+% get data
+dimA = sysparam.dimA;
+dimB = sysparam.dimB;
+dimC = sysparam.dimC;
+bigM = sysparam.bigM;
+N = sysparam.N;
+
 cont = indexlst{1};
 ncont = indexlst{2};
 undec = indexlst{3};
 contNum = length(cont);
 ncontNum = length(ncont);
 undecNum = length(undec);
-NdimA = size(Dmat, 2);
-NdimC = size(Dlim, 1);
-N = NdimA / dimA;
 
 % formulate Emat * X <= Elim & Fmat * X <= Flim, (0)
 if isempty(undec)
     Emat = []; Elim = [];
     Fmat = []; Flim = [];
 else
-    De = zeros(undecNum, NdimA);
+    De = zeros(undecNum, N*dimA);
     Delim = zeros(undecNum, 1);
-    If = zeros(undecNum, NdimC);
+    If = zeros(undecNum, N*dimC);
     for i = 1: undecNum
         De(i, :) = Dmat(undec(i), :);
         Delim(i) = Dlim(undec(i));
-        row = zeros(1, NdimC);
+        row = zeros(1, N*dimC);
         row(undec(i)) = 1;
         If(i, :) = row;
     end
-    Emat = sparse([De zeros(undecNum, N*dimB) zeros(undecNum, NdimC) ...
+    Emat = sparse([De zeros(undecNum, N*dimB) zeros(undecNum, N*dimC) ...
                 bigM*eye(undecNum)]);
     Elim = bigM*ones(undecNum, 1) - Delim;
-    Fmat = sparse([zeros(undecNum, NdimA) zeros(undecNum, N*dimB) If ...
+    Fmat = sparse([zeros(undecNum, N*dimA) zeros(undecNum, N*dimB) If ...
                 -bigM*eye(undecNum)]);
     Flim = zeros(undecNum, 1);
 end
@@ -52,13 +56,13 @@ if isempty(contNum)
     Gmat = [];
     Glim = [];
 else
-    Dg = zeros(contNum, NdimA);
+    Dg = zeros(contNum, N*dimA);
     Dglim = zeros(contNum, 1);
-    Ig = zeros(contNum, NdimC);
+    Ig = zeros(contNum, N*dimC);
     for i = 1: contNum
         Dg(i, :) = Dmat(cont(i), :);
         Dglim(i) = Dlim(cont(i));
-        row = zeros(1, NdimC);
+        row = zeros(1, N*dimC);
         row(cont(i)) = 1;
         Ig(i, :) = row;
     end
@@ -72,13 +76,13 @@ if isempty(ncontNum)
     Hmat = [];
     Hlim = [];
 else
-    Dh = zeros(ncontNum, NdimA);
+    Dh = zeros(ncontNum, N*dimA);
     Dhlim = zeros(ncontNum, 1);
-    Ih = zeros(ncontNum, NdimC);
+    Ih = zeros(ncontNum, N*dimC);
     for i = 1: ncontNum
         Dh(i, :) = Dmat(ncont(i), :);
         Dhlim(i) = Dlim(ncont(i));
-        row = zeros(1, NdimC);
+        row = zeros(1, N*dimC);
         row(ncont(i)) = 1;
         Ih(i, :) = row;
     end
@@ -88,9 +92,9 @@ else
 end
 
 % extract each term from cell array
-Smat = matrix_ineq{1}; cmat = matrix_ineq{2}; dmat = matrix_ineq{3};
-Amat = matrix_ineq{4}; bmat = matrix_ineq{5};
-Dmat = matrix_ineq{6}; Dlim = matrix_ineq{7};
+Smat = bigMat.Smat; cmat = bigMat.cmat; dmat = bigMat.dmat;
+Amat = bigMat.Amat; bmat = bigMat.bmat;
+Dmat = bigMat.Dmat; Dlim = bigMat.Dlim;
 % modify elements
 Smat = sparse(blkdiag(Smat, zeros(undecNum)));
 cmat = sparse([cmat; zeros(undecNum, dimA)]);
@@ -98,31 +102,29 @@ dmat = sparse([dmat; zeros(undecNum, N*dimA)]);
 Amat = sparse([Amat zeros(N*dimA, undecNum)]);
 Dmat = sparse([Dmat zeros(N*dimC, undecNum)]);
 % rewrite matrix ineq
-matrix_ineq_new = cell(1, 15);
-matrix_ineq_new{1} = Smat; matrix_ineq_new{2} = cmat; matrix_ineq_new{3} = dmat; 
-matrix_ineq_new{4} = Amat; matrix_ineq_new{5} = bmat;
-matrix_ineq_new{6} = Dmat; matrix_ineq_new{7} = Dlim;
-matrix_ineq_new{8} = Emat; matrix_ineq_new{9} = Elim;
-matrix_ineq_new{10} = Fmat; matrix_ineq_new{11} = Flim; 
-matrix_ineq_new{12} = Gmat; matrix_ineq_new{13} = Glim;
-matrix_ineq_new{14} = Hmat; matrix_ineq_new{15} = Hlim;
+bigMatNew.Smat = Smat; bigMatNew.cmat = cmat; bigMatNew.dmat = dmat; 
+bigMatNew.Amat = Amat; bigMatNew.bmat = bmat;
+bigMatNew.Dmat = Dmat; bigMatNew.Dlim = Dlim;
+bigMatNew.Emat = Emat; bigMatNew.Elim = Elim;
+bigMatNew.Fmat = Fmat; bigMatNew.Flim = Flim; 
+bigMatNew.Gmat = Gmat; bigMatNew.Glim = Glim;
+bigMatNew.Hmat = Hmat; bigMatNew.Hlim = Hlim;
 
 % solver settings
 % extract cell array
-senselst = solver_setting{1};
-vtypelst = solver_setting{2};
-lb = solver_setting{3};
-ub = solver_setting{4};
+senselst = solverConfig.senselst;
+vtypelst = solverConfig.vtypelst;
+lb = solverConfig.lb;
+ub = solverConfig.ub;
 % modify elements
 senselst = [senselst repmat('<', 1, N*dimC)];
 vtypelst = [vtypelst repmat('B', 1, undecNum)];
 lb = [lb; zeros(undecNum, 1)];
 ub = [ub; ones(undecNum, 1)];
-% rewrite cell array
-solver_setting_new = cell(1, 4);
-solver_setting_new{1} = senselst;
-solver_setting_new{2} = vtypelst;
-solver_setting_new{3} = lb;
-solver_setting_new{4} = ub;
+% new solver configuration
+solverConfigNew.senselst = senselst;
+solverConfigNew.vtypelst = vtypelst;
+solverConfigNew.lb = lb;
+solverConfigNew.ub = ub;
 
 end

@@ -1,4 +1,4 @@
-function [matrix_ineq, solver_setting] = FormulateSub(sysdynm, sysparam)   
+function [bigMat, solverConfig] = FormulateSub(sysdynm, sysparam)   
 % this function formulate the problem without substitution
 % build the model
 %  J = min X'*Smat*X + 2*x0'*cmat'*X + 2*Xd*dmat'*X
@@ -35,10 +35,13 @@ umin = sysparam.umin;
 % compute big matrix
 % system dynamics: x = Amat*x0 + Bmat*u + Cmat*cn
 % Notice no dynamics constraints
+% Notice Amat and blim are [] in this method, but we need Amat to conpute
+% the objective. this Amat is not the Amat in no substitution
 Amat = zeros(dimA*N, dimA);
 for i = 1: N
     Amat((i-1)*dimA+1: i*dimA, :) = mpower(A, i);
 end
+bigMat.Amat = sparse(Amat);
 
 Diag = tril(ones(N,N));
 used = zeros(N,N);
@@ -58,64 +61,49 @@ for i = 1: N
         Cmat = Cmat + kron(M, elmnt2);
     end
 end
+bigMat.Bamt = sparse(Bmat);
+bigMat.Cmat = sparse(Cmat);
 
 % Phi(q) = [q1+q2 <= dstmax-1; q1-q3-1 >= dstmin]
 % Dmat * X + Dlim >= 0 -> Phi(q(k+1)) = Dx(k+1)+dlim >= 0
 d = kron(eye(N), D);
-Dmat = sparse([d*Bmat d*Cmat zeros(N*dimC, N*dimC)]);
-Dlim1 = kron(ones(N, 1), dlim);
-Dlim2 = d*Amat;
+bigMat.Dmat = sparse([d*Bmat d*Cmat zeros(N*dimC, N*dimC)]);
+bigMat.Dlim1 = kron(ones(N, 1), dlim);
+bigMat.Dlim2 = d*Amat;
 
 % Emat * X <= Elim -> Phi(q(k+1)) <= M(1-z(k)) -> Dx(k+1)+dlim <= M(1-z) 
-Emat = sparse([d*Bmat d*Cmat kron(eye(N), bigM*eye(dimC))]);
-Elim1 = kron(ones(N, 1), [bigM; bigM]-dlim);
-Elim2 = Dlim2;
+bigMat.Emat = sparse([d*Bmat d*Cmat kron(eye(N), bigM*eye(dimC))]);
+bigMat.Elim1 = kron(ones(N, 1), [bigM; bigM]-dlim);
+bigMat.Elim2 = bigMat.Dlim2;
 
 % Fmat * X <= 0 -> cn(k) <= Mz(k)
-Fmat = sparse([zeros(N*dimC, N*dimB) kron(eye(N), eye(dimC)) ...
+bigMat.Fmat = sparse([zeros(N*dimC, N*dimB) kron(eye(N), eye(dimC)) ...
                -bigM*kron(eye(N), eye(dimC))]);
-Flim = zeros(N*dimC, 1);
+bigMat.Flim = zeros(N*dimC, 1);
            
 % Gmat * X <= Glim1 - Glim2*x0 -> xmin <= x <= xmax
 g = kron(eye(N), [eye(dimA); -eye(dimA)]);
-Gmat = sparse([g*Bmat g*Cmat zeros(N*2*dimA, N*dimC)]);
-Glim1 = kron(ones(N,1), [xmax; -xmin]);
-Glim2 = g*Amat;
+bigMat.Gmat = sparse([g*Bmat g*Cmat zeros(N*2*dimA, N*dimC)]);
+bigMat.Glim1 = kron(ones(N,1), [xmax; -xmin]);
+bigMat.Glim2 = g*Amat;
 
 % Smat, cmat -> J = X'*Smat*X + 2*cmat'*X
 q = blkdiag(kron(eye(N-1), Q), Qf);
 r = kron(eye(N), R);
 S = [Bmat'*q*Bmat+r Bmat'*q*Cmat; Cmat'*q*Bmat Cmat'*q*Cmat];
-Smat = sparse([S zeros(N*(dimB+dimC),N*dimC); ...
+bigMat.Smat = sparse([S zeros(N*(dimB+dimC),N*dimC); ...
                zeros(N*dimC, N*(dimB+dimC)) zeros(N*dimC)]);
-
 c = [Amat'*q*Bmat Amat'*q*Cmat]';
-cmat = [c; zeros(N*dimC, dimA)];
+bigMat.cmat = [c; zeros(N*dimC, dimA)];
 d = -[q*Bmat q*Cmat]';
-dmat = [d; zeros(N*dimC, N*dimA)];
-
-% write the formulation in a compact form using cell array
-% notice Amat and blim are [] in this method, but we need Amat to conpute
-% the objective. this Amat is not the Amat in no substitution
-matrix_ineq = cell(1, 17);
-matrix_ineq{1} = Smat; matrix_ineq{2} = cmat; matrix_ineq{3} = dmat;
-matrix_ineq{4} = Amat;
-matrix_ineq{5} = Dmat; matrix_ineq{6} = Dlim1; matrix_ineq{7} = Dlim2;
-matrix_ineq{8} = Emat; matrix_ineq{9} = Elim1; matrix_ineq{10} = Elim2;
-matrix_ineq{11} = Fmat; matrix_ineq{12} = Flim;
-matrix_ineq{13} = Gmat; matrix_ineq{14} = Glim1; matrix_ineq{15} = Glim2;
-matrix_ineq{16} = Q; matrix_ineq{17} = q; 
+bigMat.dmat = [d; zeros(N*dimC, N*dimA)];
+bigMat.Q = Q;
+bigMat.q = q;
 
 % solver settings
-senselst = [repmat('<', 1, 3*N*dimC) repmat('<', 1, 2*N*dimA)];
-vtypelst = [repmat('C', 1, N*(dimB+dimC)) repmat('B', 1, N*dimC)];
-lb = [kron(ones(N,1), umin); zeros(2*N*dimC, 1)];
-ub = [kron(ones(N,1), umax); Inf*ones(N*dimC, 1); ones(N*dimC, 1)];
-
-solver_setting = cell(1, 4);
-solver_setting{1} = senselst;
-solver_setting{2} = vtypelst;
-solver_setting{3} = lb;
-solver_setting{4} = ub;
+solverConfig.senselst = [repmat('<', 1, 3*N*dimC) repmat('<', 1, 2*N*dimA)];
+solverConfig.vtypelst = [repmat('C', 1, N*(dimB+dimC)) repmat('B', 1, N*dimC)];
+solverConfig.lb = [kron(ones(N,1), umin); zeros(2*N*dimC, 1)];
+solverConfig.ub = [kron(ones(N,1), umax); Inf*ones(N*dimC, 1); ones(N*dimC, 1)];
 
 end

@@ -1,21 +1,24 @@
-function [data] = SolveRelax(matrix_ineq, solver_setting, sysdynm, sysparam, initcond)
+function [data] = SolveRelax(bigMat, solverConfig, sysdynm, sysparam, initcond)
 % this function solves the optimization problem for 'iter' times
 
 % get data
-A = sysdynm.A;
-B = sysdynm.B;
-C = sysdynm.C;
 D = sysdynm.D;
 dlim = sysdynm.dlim;
 
+dimA = sysparam.dimA; 
+dimB = sysparam.dimB;
+dimC = sysparam.dimC;
 x0 = sysparam.x0;
 xd = sysparam.xd;
-bigM = sysparam.bigM;
 iter = sysparam.iter;
+N = sysparam.N;
 
-[dimA, ~] = size(A);
-[~, dimB] = size(B);
-[~, dimC] = size(C);
+Smat = bigMat.Smat; cmat = bigMat.cmat; dmat = bigMat.dmat;
+Amat = bigMat.Amat; bmat = bigMat.bmat;
+Dmat = bigMat.Dmat; Dlim = bigMat.Dlim;
+Emat = bigMat.Emat; Elim = bigMat.Elim;
+Q = bigMat.Q; q = bigMat.q;
+Xd = kron(ones(N,1), xd);
 
 % allocate variables
 xop = zeros(dimA, iter);    % optimal states (current state)
@@ -24,15 +27,6 @@ Jop = zeros(1, iter);       % optimal cost
 top = zeros(1, iter);       % time consumed at each step
 fop = zeros(2, iter);       % contact force, 1 for right, 2 for left
 %zop = zeros(2, iter);       % the corresponding bin vars
-
-% extract each term from cell array
-Smat = matrix_ineq{1}; cmat = matrix_ineq{2}; dmat = matrix_ineq{3};
-Amat = matrix_ineq{4}; bmat = matrix_ineq{5};
-Dmat = matrix_ineq{6}; Dlim = matrix_ineq{7};
-Emat = matrix_ineq{8}; Elim = matrix_ineq{9};
-Q = matrix_ineq{10}; q = matrix_ineq{11};
-N = size(q, 1) / size(Q ,1);
-Xd = kron(ones(N,1), xd);
 
 % formulate Gurobi parameters
 ineqLftRlx = {Amat, -Dmat, Emat};
@@ -45,7 +39,7 @@ for i = 1: iter
         % formulate Gurobi parameters
         ineqRhtRlx = {bmat*x0, Dlim, Elim};
         objTermRlx = {Smat, 2*cmat*x0+2*dmat*Xd, (x0-xd)'*Q*(x0-xd)+Xd'*q*Xd};
-        [result, tElapsed] = FindOptimal({ineqLftRlx, ineqRhtRlx, objTermRlx}, solver_setting, initcond);
+        [result, tElapsed] = FindOptimal({ineqLftRlx, ineqRhtRlx, objTermRlx}, solverConfig, initcond);
         X = result.x;
         % split variables
         xvar = X(1: N*dimA);
@@ -56,21 +50,21 @@ for i = 1: iter
 %        check_distribution(xvar, cvar, D, dlim);
         [cont, ncont, undec] = FindContactIndex(xvar, cvar, D, dlim);
         indexlst = {cont, ncont, undec};
-        [matrix_ineq_new, solver_setting_new] = ReformulateRelax(matrix_ineq, solver_setting, indexlst, dimA, dimB, dimC, kron(eye(N), D), Dlim, bigM);
-        % reconfigure Gurobi
-        Sm = matrix_ineq_new{1}; cm = matrix_ineq_new{2}; dm = matrix_ineq_new{3};
-        Am = matrix_ineq_new{4}; bm = matrix_ineq_new{5};
-        Dm = matrix_ineq_new{6}; Dl = matrix_ineq_new{7};
-        Em = matrix_ineq_new{8}; El = matrix_ineq_new{9};
-        Fm = matrix_ineq_new{10}; Fl = matrix_ineq_new{11};
-        Gm = matrix_ineq_new{12}; Gl = matrix_ineq_new{13};
-        Hm = matrix_ineq_new{14}; Hl = matrix_ineq_new{15};
+        [bigMatNew, solverConfigNew] = ReformulateRelax(bigMat, solverConfig, indexlst, sysparam, kron(eye(N), D), Dlim);
+        % reconfigure Gurobi    
+        Sm = bigMatNew.Smat; cm = bigMatNew.cmat; dm = bigMatNew.dmat;
+        Am = bigMatNew.Amat; bm = bigMatNew.bmat;
+        Dm = bigMatNew.Dmat; Dl = bigMatNew.Dlim;
+        Em = bigMatNew.Emat; El = bigMatNew.Elim;
+        Fm = bigMatNew.Fmat; Fl = bigMatNew.Flim;
+        Gm = bigMatNew.Gmat; Gl = bigMatNew.Glim;
+        Hm = bigMatNew.Hmat; Hl = bigMatNew.Hlim;
         
         ineqLftRef = {Am, Dm, Em, Fm, Gm, Hm};
         ineqRhtRef = {bm*x0, Dl, El, Fl, Gl, Hl};
         objTermRref = {Sm, 2*cm*x0+2*dm*Xd, (x0-xd)'*Q*(x0-xd)+Xd'*q*Xd};
         initcond = [X; 1; zeros(length(undec)-1, 1)];
-        [resultRef, tElapsedRef] = FindOptimal({ineqLftRef, ineqRhtRef, objTermRref}, solver_setting_new, initcond);
+        [resultRef, tElapsedRef] = FindOptimal({ineqLftRef, ineqRhtRef, objTermRref}, solverConfigNew, initcond);
         X = resultRef.x;
         % split variables
         xvar = X(1: N*dimA);

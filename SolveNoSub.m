@@ -1,18 +1,23 @@
-function [data] = SolveNoSub(matrix_ineq, solver_setting, sysdynm, sysparam, initcond)
+function [data] = SolveNoSub(bigMat, solverConfig, sysparam, initcond)
 % this function solves the optimization problem for 'iter' times
 
 % get data
-A = sysdynm.A;
-B = sysdynm.B;
-C = sysdynm.C;
+dimA = sysparam.dimA;
+dimB = sysparam.dimB;
+dimC = sysparam.dimC;
 
 x0 = sysparam.x0;
 xd = sysparam.xd;
 iter = sysparam.iter;
+N = sysparam.N;
 
-[dimA, ~] = size(A);
-[~, dimB] = size(B);
-[~, dimC] = size(C);
+Smat = bigMat.Smat; dmat = bigMat.dmat;
+Amat = bigMat.Amat; bmat = bigMat.bmat;
+Dmat = bigMat.Dmat; Dlim = bigMat.Dlim;
+Emat = bigMat.Emat; Elim = bigMat.Elim;
+Fmat = bigMat.Fmat; Flim = bigMat.Flim;
+Q = bigMat.Q; q = bigMat.q;
+Xd = kron(ones(N,1), xd);
 
 % allocate variables
 xop = zeros(dimA, iter);    % optimal states (current state)
@@ -22,18 +27,8 @@ top = zeros(1, iter);       % time consumed at each step
 fop = zeros(2, iter);       % contact force, 1 for right, 2 for left
 zop = zeros(2, iter);       % the corresponding bin vars
 
-% extract each term from cell array
-Smat = matrix_ineq{1}; cmat = matrix_ineq{2}; dmat = matrix_ineq{3};
-Amat = matrix_ineq{4}; bmat = matrix_ineq{5};
-Dmat = matrix_ineq{6}; Dlim = matrix_ineq{7};
-Emat = matrix_ineq{8}; Elim = matrix_ineq{9};
-Fmat = matrix_ineq{10}; Flim = matrix_ineq{11};
-Q = matrix_ineq{12}; q = matrix_ineq{13};
-N = size(q, 1) / size(Q ,1);
-Xd = kron(ones(N,1), xd);
-
 % formulate Gurobi parameters
-ineq_lft = {Amat, -Dmat, Emat, Fmat};
+ineqLft = {Amat, -Dmat, Emat, Fmat};
 
 for i = 1: iter
 %    fprintf('%d iter: \n', i);
@@ -41,9 +36,9 @@ for i = 1: iter
         xop(:, i) = x0;
     else
         % formulate Gurobi parameters
-        ineq_rht = {bmat*x0, Dlim, Elim, Flim};
-        obj_term = {Smat, 2*dmat*Xd, (x0-xd)'*Q*(x0-xd)+Xd'*q*Xd};
-        [result, tElapsed] = FindOptimal({ineq_lft, ineq_rht, obj_term}, solver_setting, initcond);
+        ineqRht = {bmat*x0, Dlim, Elim, Flim};
+        objTerm = {Smat, 2*dmat*Xd, (x0-xd)'*Q*(x0-xd)+Xd'*q*Xd};
+        [result, tElapsed] = FindOptimal({ineqLft, ineqRht, objTerm}, solverConfig, initcond);
         X = result.x;
         % split variable
         xvar = X(1: N*dimA+1);

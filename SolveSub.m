@@ -1,18 +1,25 @@
-function [data] = SolveSub(matrix_ineq, solver_setting, sysdynm, sysparam, initcond)
+function [data] = SolveSub(bigMat, solverConfig, sysdynm, sysparam, initcond)
 % this function solves the optimization problem for 'iter' times
 
 % get data
-A = sysdynm.A;
-B = sysdynm.B;
-C = sysdynm.C;
+dimA = sysparam.dimA;
+dimB = sysparam.dimB;
+dimC = sysparam.dimC;
 
 x0 = sysparam.x0;
 xd = sysparam.xd;
 iter = sysparam.iter;
+N = sysparam.N;
 
-[dimA, ~] = size(A);
-[~, dimB] = size(B);
-[~, dimC] = size(C);
+A = sysdynm.A; B = sysdynm.B; C = sysdynm.C;
+Smat = bigMat.Smat; cmat = bigMat.cmat; dmat = bigMat.dmat;
+Amat = bigMat.Amat; 
+Dmat = bigMat.Dmat; Dlim1 = bigMat.Dlim1; Dlim2 = bigMat.Dlim2;
+Emat = bigMat.Emat; Elim1 = bigMat.Elim1; Elim2 = bigMat.Elim2;
+Fmat = bigMat.Fmat; Flim = bigMat.Flim;
+Gmat = bigMat.Gmat; Glim1 = bigMat.Glim1; Glim2 = bigMat.Glim2;
+Q = bigMat.Q; q = bigMat.q;
+Xd = kron(ones(N,1), xd);
 
 % allocate variables
 xop = zeros(dimA, iter);    % optimal states (current state)
@@ -23,18 +30,18 @@ fop = zeros(2, iter);       % contact force, 1 for right, 2 for left
 zop = zeros(2, iter);       % the corresponding bin vars
 
 % extract each term from cell array
-Smat = matrix_ineq{1}; cmat = matrix_ineq{2}; dmat = matrix_ineq{3};
-Amat = matrix_ineq{4}; 
-Dmat = matrix_ineq{5}; Dlim1 = matrix_ineq{6}; Dlim2 = matrix_ineq{7};
-Emat = matrix_ineq{8}; Elim1 = matrix_ineq{9}; Elim2 = matrix_ineq{10};
-Fmat = matrix_ineq{11}; Flim = matrix_ineq{12};
-Gmat = matrix_ineq{13}; Glim1 = matrix_ineq{14}; Glim2 = matrix_ineq{15};
-Q = matrix_ineq{16}; q = matrix_ineq{17};
-N = size(q, 1) / size(Q ,1);
-Xd = kron(ones(N,1), xd);
+% Smat = matrix_ineq{1}; cmat = matrix_ineq{2}; dmat = matrix_ineq{3};
+% Amat = matrix_ineq{4}; 
+% Dmat = matrix_ineq{5}; Dlim1 = matrix_ineq{6}; Dlim2 = matrix_ineq{7};
+% Emat = matrix_ineq{8}; Elim1 = matrix_ineq{9}; Elim2 = matrix_ineq{10};
+% Fmat = matrix_ineq{11}; Flim = matrix_ineq{12};
+% Gmat = matrix_ineq{13}; Glim1 = matrix_ineq{14}; Glim2 = matrix_ineq{15};
+% Q = matrix_ineq{16}; q = matrix_ineq{17};
+% N = size(q, 1) / size(Q ,1);
+
 
 % formulate Gurobi parameters
-ineq_lft = {-Dmat, Emat, Fmat, Gmat};
+ineqLft = {-Dmat, Emat, Fmat, Gmat};
 
 for i = 1: iter
 %    fprintf('%d iter: \n', i);
@@ -42,9 +49,9 @@ for i = 1: iter
         xop(:, i) = x0;
     else
         % formulate Gurobi parameters
-        ineq_rht = {Dlim1+Dlim2*x0, Elim1-Elim2*x0, Flim, Glim1-Glim2*x0};
-        obj_term = {Smat, 2*cmat*x0+2*dmat*Xd, (x0-xd)'*Q*(x0-xd)+(Amat*x0-Xd)'*q*(Amat*x0-Xd)};
-        [result, tElapsed] = FindOptimal({ineq_lft, ineq_rht, obj_term}, solver_setting, initcond);
+        ineqRht = {Dlim1+Dlim2*x0, Elim1-Elim2*x0, Flim, Glim1-Glim2*x0};
+        objTerm = {Smat, 2*cmat*x0+2*dmat*Xd, (x0-xd)'*Q*(x0-xd)+(Amat*x0-Xd)'*q*(Amat*x0-Xd)};
+        [result, tElapsed] = FindOptimal({ineqLft, ineqRht, objTerm}, solverConfig, initcond);
         X = result.x;
         % split variables
         uvar = X(1: N*dimB);

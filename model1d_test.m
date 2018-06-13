@@ -47,21 +47,27 @@ sysdynm.D = [n' zeros(2, jointnum)];
 sysdynm.dlim = [dmax-1; -dmin-1];
 
 % get system dimension  
-dimA = size(sysdynm.A, 1);
-dimB = size(sysdynm.B, 2);
-dimC = size(sysdynm.C, 2);
+sysparam.dimA = size(sysdynm.A, 1);
+sysparam.dimB = size(sysdynm.B, 2);
+sysparam.dimC = size(sysdynm.C, 2);
 
 % initial states and desired terminal point
 sysparam.x0 = [2.5; 1; 1; 0; 0; 0];
 sysparam.xd = [3; 1.2; 0; 0; 0; 0]; 
 
+% get data
+dimA = sysparam.dimA;
+dimB = sysparam.dimB;
+dimC = sysparam.dimC;
+N = sysparam.N;
+
 % solve relax problem
 % fprintf('\nProcessing relax...\n');
 % tStart = tic; 
-% [matrix_ineq, solver_setting] = FormulateRelax(sysdynm, sysparam);
+% [bigMat_rlx, solverConfig_rlx] = FormulateRelax(sysdynm, sysparam);
 % tFormulate = toc(tStart); 
 % initcond = zeros(sysparam.N*(dimA+dimB+dimC), 1);
-% [data_relax] = SolveRelax(matrix_ineq, solver_setting, sysdynm, sysparam, initcond);
+% [data_relax] = SolveRelax(bigMat_rlx, solverConfig_rlx, sysdynm, sysparam, initcond);
 % fprintf('Relax done.\n');
 % fprintf('Formulation time for relax: %f s\n', tFormulate);
 % fprintf('Average solving time for relax: %f s\n', mean(data_relax{4}));
@@ -69,10 +75,10 @@ sysparam.xd = [3; 1.2; 0; 0; 0; 0];
 % solve no sub problem
 fprintf('\nProcessing NoSub...\n');
 tStart = tic; 
-[matrix_ineq, solver_setting] = FormulateNoSub(sysdynm, sysparam);
+[bigMat_ns, solverConfig_ns] = FormulateNoSub(sysdynm, sysparam);
 tFormulate = toc(tStart); 
 initcond = zeros(sysparam.N*(dimA+dimB+2*dimC), 1);
-[data_nosub] = SolveNoSub(matrix_ineq, solver_setting, sysdynm, sysparam, initcond);
+[data_nosub] = SolveNoSub(bigMat_ns, solverConfig_ns, sysparam, initcond);
 fprintf('NoSub done.\n');
 fprintf('Formulation time for NoSub: %f s\n', tFormulate);
 fprintf('Average solving time for Nosub: %f s\n', mean(data_nosub{4}));
@@ -80,10 +86,10 @@ fprintf('Average solving time for Nosub: %f s\n', mean(data_nosub{4}));
 % solve sub problem
 fprintf('\nProcessing Sub...\n');
 tStart = tic;
-[matrix_ineq, solver_setting] = FormulateSub(sysdynm, sysparam);
+[bigMat_sub, solverConfig_sub] = FormulateSub(sysdynm, sysparam);
 tFormulate = toc(tStart); 
 initcond = zeros(sysparam.N*(dimB+2*dimC), 1);
-[data_sub] = SolveSub(matrix_ineq, solver_setting, sysdynm, sysparam, initcond);
+[data_sub] = SolveSub(bigMat_sub, solverConfig_sub, sysdynm, sysparam, initcond);
 fprintf('Sub done.\n');
 fprintf('Formulation time for Sub: %f s\n', tFormulate);
 fprintf('Average solving time for Sub: %f s\n', mean(data_sub{4}));
