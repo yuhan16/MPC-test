@@ -16,3 +16,4 @@ Three different formulation are proposed in this part. The relaxed version is on
 
 ### 2D Model with frictionless contact
 An extended 2D robot model with four possible contact and MPC without substitution are adopted in this part. Two auxiliary functions are provided: PlotData.m and playback.m.
+
