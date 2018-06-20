@@ -24,11 +24,6 @@ vtypelst = solverConfig.vtypelst;
 lb = solverConfig.lb;
 ub = solverConfig.ub;
 
-% senselst = solver_setting{1};
-% vtypelst = solver_setting{2};
-% lb = solver_setting{3};
-% ub = solver_setting{4};
-
 try
     clear model;
     model.A = sparse(left);

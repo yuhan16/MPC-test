@@ -42,7 +42,7 @@ n = double(n);
 mat = [eye(jointnum), -dt*eye(jointnum); zeros(jointnum), eye(jointnum)];
 sysdynm.A = inv(mat);
 sysdynm.B = inv(mat) * [zeros(jointnum); inv(M)*dt];
-sysdynm.C = [zeros(jointnum, 2*1); inv(M)*n];
+sysdynm.C = inv(mat) * [zeros(jointnum, 2*1); inv(M)*n];
 sysdynm.D = [n' zeros(2, jointnum)];
 sysdynm.dlim = [dmax-1; -dmin-1];
 
