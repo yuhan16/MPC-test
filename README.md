@@ -1,21 +1,19 @@
 # MPC-test
-A repository for lab code test written by Matlab. 
+A repository for lab code test written by Matlab.
 
-This repository seeks to address the robot contact optimization problem with complementarity constraints based on the idea of MPC. The problem itself can be formulated as an QPCC, and currently the big M method is proposed to solve it with a simple 1D robot model. 
+This repository seeks to address the robot contact optimization problem with complementarity constraints based on the idea of MPC. The problem itself can be formulated as an QPCC, and currently the big M method is proposed to reformulate the problem as MIQP with different simple robot models.
 
-Two documents illustrate the problem formulation principle and code specification.
+The introduction documents illustrating the problem formulation principle and code specification are included in each folder. 
 
 The solver used here is Gurobi 8.0. For more details please check http://www.gurobi.com/
 
-## Modification:
+## Notice
+This is a developing brunch. More new features will be added including adding new models, optimizing code structure and supplementing documents.
 
-This version made a big change to the structure of the code compared with previous ones, including
+## Supplement
+### 1D Model with frictionless contact
+Three different formulation are proposed in this part. The relaxed version is only valid for non-contact scenarios and is a good approximation for MIQP, but it becomes infeasible when contact happens, which is because the relaxation method is not well considered. Anyway, it is an attempt and is kept in the code segement. For precise solution, you should run the other two formulations.
 
-1. add two formulation methods, i.e., formulation with and without substitution;
+### 2D Model with frictionless contact
+An extended 2D robot model with four possible contact and MPC without substitution are adopted in this part. Two auxiliary functions are provided: PlotData.m and playback.m.
 
-2. separate the formulation process with main test script, using cell array to convey parameters;
-
-3. add a switch to select and test different formulation methods.
-
-## Result:
-Although the formulation method with substitution greatly reduced the number of decision variables, the solving time is nearly twice as the formulation without substitution because the matrices in the former method have higher density.  
