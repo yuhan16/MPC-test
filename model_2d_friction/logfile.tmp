@@ -1,0 +1,55 @@
+Path 4.7.03: Matlab Link
+12 row/cols, 74 non-zeros, 51.39% dense.
+
+Could not open options file: path.opt
+Using defaults.
+Path 4.7.03 (Mon Feb 27 19:48:03 2012)
+Written by Todd Munson, Steven Dirkse, and Michael Ferris
+
+
+INITIAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  0.0000e+00 var: (x[    1])
+Maximum of F. . . . . . . . . .  5.3361e+00 eqn: (f[    1])
+Maximum of Grad F . . . . . . .  1.0000e+00 eqn: (f[    8])
+                                            var: (x[    2])
+
+INITIAL JACOBIAN NORM STATISTICS
+Maximum Row Norm. . . . . . . .  7.2426e+00 eqn: (f[    4])
+Minimum Row Norm. . . . . . . .  5.1213e-01 eqn: (f[    2])
+Maximum Column Norm . . . . . .  5.9698e+00 var: (x[    4])
+Minimum Column Norm . . . . . .  2.0000e+00 var: (x[   10])
+
+Crash Log
+major  func  diff  size  residual    step       prox   (label)
+    0     0             1.1126e-12             0.0e+00 (f[    8])
+
+Major Iteration Log
+major minor  func  grad  residual    step  type prox    inorm  (label)
+    0     0     1     1 1.1126e-12           I 0.0e+00 7.6e-13 (f[    8])
+
+FINAL STATISTICS
+Inf-Norm of Complementarity . .  3.8163e-13 eqn: (f[    8])
+Inf-Norm of Normal Map. . . . .  3.8163e-13 eqn: (f[    8])
+Inf-Norm of Minimum Map . . . .  3.8163e-13 eqn: (f[    8])
+Inf-Norm of Fischer Function. .  7.6326e-13 eqn: (f[    8])
+Inf-Norm of Grad Fischer Fcn. .  2.5994e-12 eqn: (f[    4])
+Two-Norm of Grad Fischer Fcn. .  5.4500e-12
+
+FINAL POINT STATISTICS
+Maximum of X. . . . . . . . . .  0.0000e+00 var: (x[    1])
+Maximum of F. . . . . . . . . .  5.3361e+00 eqn: (f[    1])
+Maximum of Grad F . . . . . . .  1.0000e+00 eqn: (f[    8])
+                                            var: (x[    2])
+
+ ** EXIT - solution found.
+
+Major Iterations. . . . 0
+Minor Iterations. . . . 0
+Restarts. . . . . . . . 0
+Crash Iterations. . . . 0
+Gradient Steps. . . . . 0
+Function Evaluations. . 1
+Gradient Evaluations. . 1
+Basis Time. . . . . . . 0.000004
+Total Time. . . . . . . 0.000139
+Residual. . . . . . . . 1.112641e-12
