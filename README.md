@@ -18,7 +18,7 @@ Three different formulation are proposed in this part. The relaxed version is on
 An extended 2D robot model with four possible contact and MPC without substitution are adopted in this part. Two auxiliary functions are provided: PlotData.m and playback.m.
 
 ### 2D Model with frictional contact
-A simple two link 2D robot is used in this part. There are three frictional contact surface in total, and the modeling steps have been included in the introductioin document.
+A simple two link 2D robot is used in this part. There are three frictional contact surface in total, and the modeling steps have been included in the introductioin document. Three auxiliary functions are provided: PlotData.m, PlotError.m and playback.m.
 
 An LCP solver-The PATH Solver, has been used here to check the MIQP solution. The simulation result shows that in some cases the LCP solver may give infeasible solution because the corresponding LCP matrix is not copositive and there is no guarantee to have a solution. For more information about PATH Solver, please check http://pages.cs.wisc.edu/~ferris/path.html
 
